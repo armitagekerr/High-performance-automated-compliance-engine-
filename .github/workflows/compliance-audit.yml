@@ -1,0 +1,182 @@
+name: Automated Compliance Audit
+
+on:
+  schedule:
+    # Run daily at 06:00 UTC
+    - cron: "0 6 * * *"
+  push:
+    branches:
+      - main
+      - "copilot/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  # ------------------------------------------------------------------
+  # Job 1: Python / Playwright scraper — captures network evidence
+  # ------------------------------------------------------------------
+  scrape-and-audit:
+    name: "Scrape & Audit (${{ matrix.page }})"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        page: [homepage, pdp, checkout]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          pip install pytest playwright pytest-playwright allure-pytest
+          playwright install --with-deps chromium
+
+      - name: Run ${{ matrix.page }} audit
+        env:
+          AUDIT_BASE_URL: ${{ secrets.AUDIT_BASE_URL }}
+        run: |
+          pytest automation/scenarios/test_${{ matrix.page }}.py \
+            --alluredir=dashboard/allure-results \
+            -v
+
+      - name: Upload Allure results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results-${{ matrix.page }}
+          path: dashboard/allure-results/
+          retention-days: 30
+
+  # ------------------------------------------------------------------
+  # Job 2: Node.js evaluator — classifies violations from evidence
+  # ------------------------------------------------------------------
+  evaluate-violations:
+    name: "Evaluate Violations"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: scrape-and-audit
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Download all Allure results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: allure-results-*
+          path: dashboard/allure-results/
+          merge-multiple: true
+
+      - name: Run evaluator engine
+        env:
+          LOG_LEVEL: info
+        run: node evaluator/evaluator-engine.js
+
+      - name: Upload violation report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: violation-report
+          path: violation-report.json
+          retention-days: 30
+
+  # ------------------------------------------------------------------
+  # Job 3: AI narrative — generates legal-risk summaries via LLM
+  # ------------------------------------------------------------------
+  generate-narrative:
+    name: "Generate AI Narrative"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: evaluate-violations
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Download violation report
+        uses: actions/download-artifact@v4
+        with:
+          name: violation-report
+          path: .
+
+      - name: Generate AI narrative
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node ai-narrative/narrative-generator.js
+
+      - name: Upload AI narrative
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-narrative-report
+          path: narrative-report.md
+          retention-days: 30
+
+  # ------------------------------------------------------------------
+  # Job 4: Allure report — publishes HTML dashboard
+  # ------------------------------------------------------------------
+  publish-report:
+    name: "Publish Allure Report"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: [scrape-and-audit, evaluate-violations]
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all Allure results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: allure-results-*
+          path: dashboard/allure-results/
+          merge-multiple: true
+
+      - name: Generate Allure HTML report
+        uses: simple-elf/allure-report-action@v1.7
+        with:
+          allure_results: dashboard/allure-results
+          allure_report: dashboard/allure-report
+          gh_pages: gh-pages
+          allure_history: allure-history
+
+      - name: Upload Allure HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-html-report
+          path: dashboard/allure-report/
+          retention-days: 30
