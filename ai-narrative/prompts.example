@@ -1,0 +1,201 @@
+# Prompt Engineering Examples — Compliance Sentinel AI Narrative
+
+This file contains sanitised examples of the prompts used in
+`narrative-generator.js` to guide the LLM in producing accurate,
+legally-grounded compliance narratives.
+
+All URLs, domain names, and sensitive data have been replaced with
+placeholder values.
+
+---
+
+## System Prompt (Role Definition)
+
+```
+You are a senior GDPR and ePrivacy compliance expert with deep knowledge of:
+- The General Data Protection Regulation (GDPR) 2016/679
+- The ePrivacy Directive 2002/58/EC (as amended by 2009/136/EC)
+- The UK Privacy and Electronic Communications Regulations (PECR)
+- ICO enforcement guidance and decisions
+- DPA enforcement actions across the EU
+
+Your task is to analyse automated compliance audit findings and produce a clear,
+actionable legal-risk narrative for a Data Protection Officer (DPO) or legal team.
+
+Your report should:
+1. Summarise the overall compliance posture in plain English
+2. Identify the most serious violations and their specific legal basis
+3. Explain the real-world risk and potential regulatory consequences
+4. Provide prioritised remediation recommendations
+5. Reference specific legal articles (e.g. GDPR Art. 6(1)(a), ePrivacy Art. 5(3))
+
+Use markdown formatting. Be concise but precise. Do not include disclaimers.
+```
+
+---
+
+## Example User Prompt (Sanitised)
+
+```
+Audit generated: 2024-06-01T06:00:00.000Z
+
+SUMMARY
+=======
+Total violations: 4
+By severity:
+  - CRITICAL: 2
+  - HIGH:     1
+  - MEDIUM:   1
+  - LOW:      0
+
+Rule breakdown:
+  - IDENTITY_SYNC: 2
+  - PRIOR_CONSENT: 1
+  - COOKIE_WITHOUT_CONSENT: 1
+
+DETAILED VIOLATIONS
+===================
+1. [CRITICAL] IDENTITY_SYNC
+   Vendor: Google
+   URL: https://accounts.example-google.com/gen_204?...
+   Description: Google Identity Sync request detected at accounts.example-google.com
+                before user consent. This request may link the visitor's browsing
+                session to their Google account identity across domains.
+   Legal ref: GDPR Art. 5(1)(f), Art. 6(1)(a); ePrivacy Directive Art. 5(3)
+   Test: No Google Identity Sync on checkout load (pre-consent)
+
+2. [CRITICAL] IDENTITY_SYNC_COOKIE
+   Vendor: Google
+   Cookie: NID
+   Description: Google Identity Sync cookie "NID" was set on domain ".example-google.com"
+                before user consent. This cookie is used to link the user's on-site
+                identity to their Google account.
+   Legal ref: GDPR Art. 5(1)(f), Art. 6(1)(a); ePrivacy Directive Art. 5(3)
+   Test: No Google Identity Sync on checkout load (pre-consent)
+
+3. [HIGH] PRIOR_CONSENT
+   Vendor: Google DoubleClick
+   URL: https://doubleclick.example.net/pagead/...
+   Description: Request to Google DoubleClick fired before user consent.
+                Category: advertising.
+   Legal ref: ePrivacy Directive Art. 5(3) / PECR Reg. 6(1)
+   Test: No tracking pixels fired on PDP load (pre-consent)
+
+4. [MEDIUM] COOKIE_WITHOUT_CONSENT
+   Vendor: Google Analytics
+   Cookie: _ga
+   Description: Cookie "_ga" (Google Analytics) was set before consent.
+                Purpose: Google Analytics — distinguishes users. Persists for 2 years.
+   Legal ref: GDPR Art. 6(1)(a) / ePrivacy Directive Art. 5(3)
+   Test: No tracking pixels fired on homepage load (pre-consent)
+```
+
+---
+
+## Example Model Output (Sanitised)
+
+```markdown
+# Compliance Narrative: Automated GDPR/ePrivacy Audit — 1 June 2024
+
+## Executive Summary
+
+The automated audit detected **4 compliance violations** across the homepage,
+product detail page (PDP), and checkout journey. Two are classified as
+**CRITICAL** and relate to Google Identity Sync — a mechanism whereby a Google
+Pay iframe on the checkout page synchronises the visitor's browser identity with
+their Google account before any consent is obtained.
+
+This constitutes a direct breach of ePrivacy Directive Article 5(3) and, where
+personal data is involved, GDPR Article 6(1)(a). The pattern is consistent with
+enforcement findings by the French CNIL (Google — €150M, January 2022) and the
+Belgian DPA.
+
+---
+
+## Critical Findings
+
+### 1. Google Identity Sync — Checkout Page (CRITICAL × 2)
+
+**What was observed:** When a user with no consent cookies lands on the checkout
+page, two Google-originating requests fire automatically:
+- A network request to `accounts.google.com/gen_204`
+- The `NID` cookie is set on the user's browser by the embedded Google Pay iframe
+
+**Legal analysis:**
+- **ePrivacy Directive Art. 5(3):** Storing or accessing information on a terminal
+  device (including cookies and tracking pixels) requires prior informed consent
+  unless strictly necessary for a service explicitly requested by the user.
+  Google Pay's identity synchronisation is not strictly necessary for browsing.
+- **GDPR Art. 6(1)(a):** If the NID cookie enables identification of the user
+  (highly likely given its purpose), processing requires a valid legal basis.
+  No consent was recorded; legitimate interests cannot be relied upon for
+  non-essential tracking (EDPB Guidelines 05/2020).
+
+**Risk:** ICO fines up to £17.5M or 4% global annual turnover (UK GDPR Art. 83).
+Comparable DPA fines have ranged from €50,000 to €150M for similar violations.
+
+**Remediation:** Block the Google Pay iframe from loading until explicit consent
+is obtained for the 'marketing' or 'functional' category. Use a consent management
+platform (CMP) tag-blocking feature (e.g. OneTrust, Cookiebot).
+
+---
+
+### 2. DoubleClick Advertising Beacon — PDP (HIGH)
+
+**What was observed:** A request to `doubleclick.net/pagead/` was fired on the
+product detail page before consent.
+
+**Legal analysis:** Advertising/remarketing cookies require prior consent
+(ePrivacy Art. 5(3)). DoubleClick beacons are used to build remarketing audiences
+— a clearly non-essential purpose.
+
+**Remediation:** Ensure the Google Tag Manager tag for DoubleClick remarketing is
+placed behind a consent trigger that only fires when the user accepts advertising cookies.
+
+---
+
+### 3. Google Analytics `_ga` Cookie — Homepage (MEDIUM)
+
+**What was observed:** The `_ga` cookie (Google Analytics, 2-year retention) was
+set on the homepage before the user interacted with the consent banner.
+
+**Legal analysis:** Analytics cookies are non-essential under ICO guidance
+(May 2023) and require prior consent. Setting `_ga` before consent violates
+ePrivacy Art. 5(3).
+
+**Remediation:** Configure Google Analytics to use consent mode v2 with
+`analytics_storage` defaulting to `'denied'` until consent is granted.
+
+---
+
+## Prioritised Remediation Roadmap
+
+| Priority | Action | Deadline |
+|----------|--------|----------|
+| 1 (Critical) | Block Google Pay iframe until consent granted | 2 weeks |
+| 2 (High) | Move DoubleClick tag behind CMP consent trigger | 2 weeks |
+| 3 (Medium) | Enable GA4 Consent Mode v2 with denied defaults | 4 weeks |
+| 4 (Ongoing) | Monthly automated audits via Compliance Sentinel | Continuous |
+
+---
+
+## Legal References
+
+- GDPR (EU) 2016/679, Articles 5, 6, 7, 83
+- ePrivacy Directive 2002/58/EC, Article 5(3)
+- UK Privacy and Electronic Communications Regulations 2003 (PECR), Regulation 6
+- EDPB Guidelines 05/2020 on consent
+- ICO Guidance on Cookies and Similar Technologies (updated May 2023)
+- CNIL v. Google LLC, Decision SAN-2022-001 (January 2022)
+```
+
+---
+
+## Prompt Engineering Notes
+
+- **Temperature:** Use 0.2–0.3 for factual legal narratives (reduces hallucination).
+- **Model:** GPT-4o or equivalent with strong instruction-following.
+- **Token budget:** Limit violation list to ~30 items; summarise remainder by category.
+- **System prompt anchoring:** The role definition significantly improves legal accuracy.
+- **No disclaimers:** Explicitly instruct the model to omit "I am not a lawyer" disclaimers
+  since the output is for expert DPO/legal use, not public-facing advice.
