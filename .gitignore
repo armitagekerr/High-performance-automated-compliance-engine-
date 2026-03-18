@@ -42,4 +42,3 @@ build/
 # Generated output files (produced at runtime, not committed)
 violation-report.json
 narrative-report.md
-package-lock.json
