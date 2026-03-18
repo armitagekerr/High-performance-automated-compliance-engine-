@@ -1,0 +1,35 @@
+{
+  "name": "compliance-sentinel-platform",
+  "version": "1.0.0",
+  "description": "High-performance automated compliance engine using Playwright and Node.js to detect GDPR/ePrivacy 'Prior Consent' failures.",
+  "main": "evaluator/evaluator-engine.js",
+  "scripts": {
+    "audit": "node evaluator/evaluator-engine.js",
+    "narrative": "node ai-narrative/narrative-generator.js",
+    "test:automation": "pytest automation/ --alluredir=dashboard/allure-results",
+    "report": "allure generate dashboard/allure-results -o dashboard/allure-report --clean",
+    "lint": "eslint evaluator/ ai-narrative/"
+  },
+  "keywords": [
+    "gdpr",
+    "eprivacy",
+    "compliance",
+    "playwright",
+    "cookie-audit",
+    "prior-consent",
+    "tracking",
+    "identity-sync"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "openai": "^4.47.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

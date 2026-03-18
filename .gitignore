@@ -1,0 +1,45 @@
+# -------------------------------------------------------
+# Compliance Sentinel Platform — .gitignore
+# -------------------------------------------------------
+
+# Environment secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Node dependencies
+node_modules/
+
+# Python virtual environments and caches
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Allure raw results — generated per run, not stored in git
+dashboard/allure-results/
+
+# Playwright browser state & recordings
+playwright/.auth/
+playwright-report/
+test-results/
+*.webm
+*.zip
+
+# OS artefacts
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+
+# Build artefacts
+dist/
+build/
+
+# Generated output files (produced at runtime, not committed)
+violation-report.json
+narrative-report.md
+package-lock.json
