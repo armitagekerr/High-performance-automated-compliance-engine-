@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright, BrowserContext, Page
 # Configuration
 # ---------------------------------------------------------------------------
 
-BASE_URL: str = os.environ.get("AUDIT_BASE_URL") or "https://example.com"
+BASE_URL: str = os.environ.get("AUDIT_BASE_URL", "https://example.com")
 
 CONSENT_COOKIE_NAMES: list[str] = [
     "cookieconsent_status",
@@ -37,28 +37,6 @@ KNOWN_TRACKING_DOMAINS: list[str] = [
     "adyen.com",
     "pay.google.com",
 ]
-
-
-# ---------------------------------------------------------------------------
-# Skip all tests when AUDIT_BASE_URL is not configured
-# ---------------------------------------------------------------------------
-
-_AUDIT_URL_CONFIGURED: bool = bool(os.environ.get("AUDIT_BASE_URL"))
-
-
-def pytest_collection_modifyitems(items: list) -> None:
-    """Mark every test as skipped when AUDIT_BASE_URL is not set."""
-    if _AUDIT_URL_CONFIGURED:
-        return
-    skip_marker = pytest.mark.skip(
-        reason=(
-            "AUDIT_BASE_URL is not configured. "
-            "Set the AUDIT_BASE_URL secret/environment variable to a target site URL "
-            "to run live compliance audits."
-        )
-    )
-    for item in items:
-        item.add_marker(skip_marker)
 
 
 # ---------------------------------------------------------------------------

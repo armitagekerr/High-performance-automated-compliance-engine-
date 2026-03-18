@@ -166,16 +166,13 @@ jobs:
           path: dashboard/allure-results/
           merge-multiple: true
 
-      - name: Set up Node.js 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-
-      - name: Install Allure CLI
-        run: npm install -g allure-commandline
-
       - name: Generate Allure HTML report
-        run: allure generate dashboard/allure-results -o dashboard/allure-report --clean
+        uses: simple-elf/allure-report-action@v1.7
+        with:
+          allure_results: dashboard/allure-results
+          allure_report: dashboard/allure-report
+          gh_pages: gh-pages
+          allure_history: allure-history
 
       - name: Upload Allure HTML report
         uses: actions/upload-artifact@v4
