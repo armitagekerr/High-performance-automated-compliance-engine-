@@ -19,31 +19,16 @@ Modern e-commerce sites routinely fire advertising pixels, analytics scripts, an
 ## Architecture
 
 ```
-compliance-sentinel-platform/
-├── .github/workflows/          # CI/CD — scheduled daily audits via GitHub Actions
-├── automation/                 # THE EYES: Playwright/Python scrapers
-│   ├── scenarios/              # test_homepage.py, test_pdp.py, test_checkout.py
-│   ├── utils/                  # browser_context.py, network_baseline.py
-│   └── conftest.py             # Global pytest fixtures (pristine context, network capture)
-├── evaluator/                  # THE BRAIN: Node.js rule engine
-│   ├── evaluator-engine.js     # Orchestrator — reads Allure JSON, runs rules, writes report
-│   ├── canonical-table.js      # Master cookie dictionary (vendor, category, consent required)
-│   └── rules/
-│       ├── prior-consent.js    # ePrivacy prior-consent rule engine
-│       └── identity-sync.js    # Google Identity Sync detection (NID, DSID, gen_204)
-├── ai-narrative/               # THE INTELLIGENCE: LLM reporting
-│   ├── narrative-generator.js  # Translates violation JSON → legal-risk narrative via GPT-4o
-│   └── prompts.example         # Sanitised prompt engineering examples with annotated output
-├── dashboard/
-│   ├── allure-results/         # Raw JSON evidence (git-ignored; generated per run)
-│   └── allure-report/          # Sample static Allure HTML report
-├── docs/
-│   ├── architecture-diag.md    # Mermaid end-to-end flow diagram
-│   └── adyen-leak-audit.md     # Adyen/Google Identity Sync write-up
-├── .env.example                # Environment variable template
-├── .gitignore
-├── package.json
-└── README.md
+graph TD
+    A[Playwright Scraper] -->|Network Trace| B(Allure Results)
+    B --> C{Node.js Evaluator}
+    C -->|Match| D[Canonical Table]
+    C -->|No Match| E[Human Review Queue]
+    D -->|Violation| F[Severity Escalator]
+    F -->|Critical/High| G[AI Narrative Engine]
+    G -->|GPT-4o| H[DPO-Ready Report]
+    H --> I[GitHub Action Failure/Gate]
+
 ```
 
 See [`docs/architecture-diag.md`](docs/architecture-diag.md) for the full Mermaid flow diagram.
